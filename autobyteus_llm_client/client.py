@@ -128,10 +128,11 @@ class AutobyteusClient:
             error_detail = self._extract_error_detail(e)
             logger.error(f"Stream error: {error_detail}")
             raise RuntimeError(error_detail) from e
+        
     async def cleanup(self, conversation_id: str) -> Dict[str, Any]:
         """Clean up a conversation"""
         try:
-            response = await self.client.post(
+            response = await self.async_client.post(
                 urljoin(self.server_url, "/cleanup"),
                 json={"conversation_id": conversation_id}
             )
