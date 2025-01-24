@@ -14,32 +14,52 @@ class AutobyteusClient:
     
     def __init__(self):
         self.server_url = os.getenv('AUTOBYTEUS_SERVER_URL', self.DEFAULT_SERVER_URL)
-        api_key = os.getenv(self.API_KEY_ENV_VAR)
+        self.api_key = os.getenv(self.API_KEY_ENV_VAR)
         
-        if not api_key:
+        if not self.api_key:
             raise ValueError(
                 f"{self.API_KEY_ENV_VAR} environment variable is required. "
                 "Please set it before initializing the client."
             )
         
-        self.client = httpx.AsyncClient(
+        # Async client for normal operations
+        self.async_client = httpx.AsyncClient(
             verify=True,
-            headers={self.API_KEY_HEADER: api_key},
+            headers={self.API_KEY_HEADER: self.api_key},
             timeout=httpx.Timeout(10.0)
         )
+        
+        # Sync client for discovery operations
+        self.sync_client = httpx.Client(
+            verify=True,
+            headers={self.API_KEY_HEADER: self.api_key},
+            timeout=10.0
+        )
+        
         logger.info(f"Initialized Autobyteus client with server URL: {self.server_url}")
 
-    async def get_available_models(self) -> Dict[str, Any]:
-        """Fetch available models from the server"""
+    def get_available_models_sync(self) -> Dict[str, Any]:
+        """Synchronous model discovery for factory initialization"""
         try:
-            response = await self.client.get(urljoin(self.server_url, "/models"))
+            response = self.sync_client.get(urljoin(self.server_url, "/models"))
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
             error_detail = self._extract_error_detail(e)
-            logger.error(f"HTTP error fetching models: {error_detail}")
+            logger.error(f"Sync model fetch error: {error_detail}")
             raise RuntimeError(error_detail) from e
-        
+
+    async def get_available_models(self) -> Dict[str, Any]:
+        """Async model discovery for other use cases"""
+        try:
+            response = await self.async_client.get(urljoin(self.server_url, "/models"))
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            error_detail = self._extract_error_detail(e)
+            logger.error(f"Async model fetch error: {error_detail}")
+            raise RuntimeError(error_detail) from e
+
     async def send_message(
         self,
         conversation_id: str,
@@ -57,7 +77,7 @@ class AutobyteusClient:
                 "file_paths": file_paths or [],
                 "user_message_index": user_message_index
             }
-            response = await self.client.post(
+            response = await self.async_client.post(
                 urljoin(self.server_url, "/send-message"),
                 json=data
             )
@@ -86,7 +106,7 @@ class AutobyteusClient:
                 "user_message_index": user_message_index
             }
             
-            async with self.client.stream(
+            async with self.async_client.stream(
                 "POST",
                 urljoin(self.server_url, "/stream-message"),
                 json=data
@@ -108,7 +128,6 @@ class AutobyteusClient:
             error_detail = self._extract_error_detail(e)
             logger.error(f"Stream error: {error_detail}")
             raise RuntimeError(error_detail) from e
-
     async def cleanup(self, conversation_id: str) -> Dict[str, Any]:
         """Clean up a conversation"""
         try:
@@ -124,8 +143,9 @@ class AutobyteusClient:
             raise RuntimeError(error_detail) from e
 
     async def close(self):
-        """Close the HTTP client"""
-        await self.client.aclose()
+        """Close both clients"""
+        await self.async_client.aclose()
+        self.sync_client.close()
 
     def _extract_error_detail(self, error: httpx.HTTPError) -> str:
         """Extract error details from HTTP response"""
