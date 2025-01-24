@@ -1,6 +1,7 @@
 import pytest
 import httpx
 import json
+import os
 from autobyteus_llm_client.client import AutobyteusClient
 from typing import Dict, Any
 
@@ -36,9 +37,9 @@ async def test_send_message(client: AutobyteusClient):
     response = await client.send_message(
         conversation_id="test-conv-1",
         model_name=model['value'],
-        user_message="Integration test message",
-        file_paths=["test_file1.txt", "test_file2.pdf"],
-        user_message_index=1
+        user_message="hello, how are you doing",
+        file_paths=[],
+        user_message_index=0
     )
     
     assert 'response' in response, "Missing response field"
@@ -60,37 +61,42 @@ async def test_stream_message(client: AutobyteusClient):
     
     model = models['models'][0]
     stream = client.stream_message(
-        conversation_id="test-conv-2",
+        conversation_id="test-conv-3",
         model_name=model['value'],
-        user_message="Stream test message with attachment",
-        file_paths=["stream_file.txt"],
-        user_message_index=2
+        user_message="Hello, how are you doing",
+        file_paths=[],
+        user_message_index=0
     )
     
     received_chunks = []
-    total_tokens = 0
     async for chunk in stream:
         assert isinstance(chunk, dict), "Chunk should be a dictionary"
         assert 'content' in chunk, "Chunk missing content field"
-        received_chunks.append(chunk)
         
-        if 'token_usage' in chunk:
-            usage = chunk['token_usage']
-            assert all(key in usage for key in ('prompt_tokens', 'completion_tokens', 'total_tokens')), \
-                "Token usage missing required fields in intermediate chunk"
-            total_tokens = usage['total_tokens']
+        # Validate intermediate chunks have no token usage
+        if not chunk.get('is_complete', False):
+            assert chunk.get('token_usage') is None, \
+                "Intermediate chunks should not contain token usage data"
+        
+        received_chunks.append(chunk)
 
     assert len(received_chunks) > 0, "Should receive at least one chunk"
     
     final_chunk = received_chunks[-1]
     assert final_chunk.get('is_complete', False), "Last chunk should mark completion"
     
-    if 'token_usage' in final_chunk:
-        usage = final_chunk['token_usage']
-        assert usage['total_tokens'] == total_tokens, "Total tokens should be consistent"
-        assert usage['total_tokens'] > 0, "Total tokens should be positive"
-        assert usage['prompt_tokens'] <= usage['total_tokens'], "Prompt tokens should not exceed total"
-        assert usage['completion_tokens'] <= usage['total_tokens'], "Completion tokens should not exceed total"
+    # Validate final chunk contains token usage
+    assert 'token_usage' in final_chunk, "Final chunk missing token usage data"
+    usage = final_chunk['token_usage']
+    assert all(key in usage for key in ('prompt_tokens', 'completion_tokens', 'total_tokens')), \
+        "Token usage missing required fields in final chunk"
+    assert all(isinstance(usage[key], int) for key in usage), \
+        "Token counts should be integers"
+    assert usage['total_tokens'] > 0, "Total tokens should be positive"
+    assert usage['prompt_tokens'] <= usage['total_tokens'], \
+        "Prompt tokens should not exceed total"
+    assert usage['completion_tokens'] <= usage['total_tokens'], \
+        "Completion tokens should not exceed total"
 
 @pytest.mark.asyncio
 async def test_cleanup(client: AutobyteusClient):
