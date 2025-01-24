@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="autobyteus_llm_client",
-    version="0.1.0",
+    version="1.0.1",
     author="Ryan Zheng",
     author_email="ryan.zheng.work@gmail.com",
     description="Async Python client for Autobyteus LLM API",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/autobyteus-llm-client",
+    url="https://github.com/AutoByteus/autobyteus_llm_client.git",
     packages=find_packages(include=["autobyteus_llm_client", "autobyteus_llm_client.*"]),
     python_requires=">=3.8",
     install_requires=[

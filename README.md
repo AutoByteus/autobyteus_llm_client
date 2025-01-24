@@ -37,7 +37,7 @@ async def main():
     # Send a message
     response = await client.send_message(
         conversation_id="test_conv",
-        model_name="gpt-4",
+        model_name="test-model",
         user_message="Hello, world!"
     )
     print(f"Response: {response}")
@@ -59,7 +59,7 @@ async def stream_example():
     try:
         async for chunk in client.stream_message(
             conversation_id="stream_conv",
-            model_name="gpt-4",
+            model_name="test-model",
             user_message="Stream this response"
         ):
             print(f"Received chunk: {chunk}")
