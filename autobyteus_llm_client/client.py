@@ -22,18 +22,26 @@ class AutobyteusClient:
                 "Please set it before initializing the client."
             )
         
-        # Async client for normal operations - no timeout
+        # Configure timeout with only connect timeout set
+        timeout_config = httpx.Timeout(
+            connect=10.0,  # 10 second connect timeout
+            read=None,     # No read timeout
+            write=None,    # No write timeout
+            pool=None      # No pool timeout
+        )
+        
+        # Async client for normal operations
         self.async_client = httpx.AsyncClient(
             verify=True,
             headers={self.API_KEY_HEADER: self.api_key},
-            timeout=None  # Disable all timeouts
+            timeout=timeout_config
         )
         
-        # Sync client for discovery operations - no timeout
+        # Sync client for discovery operations
         self.sync_client = httpx.Client(
             verify=True,
             headers={self.API_KEY_HEADER: self.api_key},
-            timeout=None  # Disable all timeouts
+            timeout=timeout_config
         )
         
         logger.info(f"Initialized Autobyteus client with server URL: {self.server_url}")
