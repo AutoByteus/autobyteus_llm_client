@@ -22,18 +22,18 @@ class AutobyteusClient:
                 "Please set it before initializing the client."
             )
         
-        # Async client for normal operations
+        # Async client for normal operations - no timeout
         self.async_client = httpx.AsyncClient(
             verify=True,
             headers={self.API_KEY_HEADER: self.api_key},
-            timeout=httpx.Timeout(10.0)
+            timeout=None  # Disable all timeouts
         )
         
-        # Sync client for discovery operations
+        # Sync client for discovery operations - no timeout
         self.sync_client = httpx.Client(
             verify=True,
             headers={self.API_KEY_HEADER: self.api_key},
-            timeout=10.0
+            timeout=None  # Disable all timeouts
         )
         
         logger.info(f"Initialized Autobyteus client with server URL: {self.server_url}")
@@ -45,9 +45,8 @@ class AutobyteusClient:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            error_detail = self._extract_error_detail(e)
-            logger.error(f"Sync model fetch error: {error_detail}")
-            raise RuntimeError(error_detail) from e
+            logger.error(f"Sync model fetch error: {str(e)}")
+            raise RuntimeError(str(e)) from e
 
     async def get_available_models(self) -> Dict[str, Any]:
         """Async model discovery for other use cases"""
@@ -56,9 +55,8 @@ class AutobyteusClient:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            error_detail = self._extract_error_detail(e)
-            logger.error(f"Async model fetch error: {error_detail}")
-            raise RuntimeError(error_detail) from e
+            logger.error(f"Async model fetch error: {str(e)}")
+            raise RuntimeError(str(e)) from e
 
     async def send_message(
         self,
@@ -84,9 +82,8 @@ class AutobyteusClient:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            error_detail = self._extract_error_detail(e)
-            logger.error(f"Error sending message: {error_detail}")
-            raise RuntimeError(error_detail) from e
+            logger.error(f"Error sending message: {str(e)}")
+            raise RuntimeError(str(e)) from e
 
     async def stream_message(
         self,
@@ -125,9 +122,8 @@ class AutobyteusClient:
                             raise RuntimeError("Invalid stream response format")
 
         except httpx.HTTPError as e:
-            error_detail = self._extract_error_detail(e)
-            logger.error(f"Stream error: {error_detail}")
-            raise RuntimeError(error_detail) from e
+            logger.error(f"Stream error: {str(e)}")
+            raise RuntimeError(str(e)) from e
         
     async def cleanup(self, conversation_id: str) -> Dict[str, Any]:
         """Clean up a conversation"""
@@ -139,21 +135,10 @@ class AutobyteusClient:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            error_detail = self._extract_error_detail(e)
-            logger.error(f"Cleanup error: {error_detail}")
-            raise RuntimeError(error_detail) from e
+            logger.error(f"Cleanup error: {str(e)}")
+            raise RuntimeError(str(e)) from e
 
     async def close(self):
         """Close both clients"""
         await self.async_client.aclose()
         self.sync_client.close()
-
-    def _extract_error_detail(self, error: httpx.HTTPError) -> str:
-        """Extract error details from HTTP response"""
-        if isinstance(error, httpx.HTTPStatusError):
-            try:
-                response_data = error.response.json()
-                return response_data.get('detail', str(error))
-            except json.JSONDecodeError:
-                return error.response.text or str(error)
-        return str(error)

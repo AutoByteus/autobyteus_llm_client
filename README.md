@@ -1,97 +1,68 @@
 # Autobyteus LLM Client
 
-Python async client library for interacting with the Autobyteus LLM API.
+Async Python client for Autobyteus LLM API.
 
 ## Installation
 
 ```bash
-pip install autobyteus-llm-client
+pip install autobyteus_llm_client
 ```
 
-For development/testing:
+## Building and Publishing the Package
+
+### Prerequisites
+
+1. Create a PyPI account at https://pypi.org/account/register/
+2. Install build and twine:
 ```bash
-pip install -e .[test]
+pip install build twine
 ```
 
-## Configuration
+### Building the Package
 
-Set required environment variables:
+To build the package, run:
 ```bash
-export AUTOBYTEUS_API_KEY="your_api_key_here"
-export AUTOBYTEUS_SERVER_URL="http://localhost:8000"  # Optional, defaults to localhost
+python -m build
 ```
 
-## Usage
+This will create two files in the `dist` directory:
+- A source archive (.tar.gz)
+- A wheel (.whl)
 
-```python
-from autobyteus_llm_client import AutobyteusClient
+### Publishing to PyPI
 
-async def main():
-    # Initialize client
-    client = AutobyteusClient()
-    
-    # Get available models
-    models = await client.get_available_models()
-    print(f"Available models: {models}")
-    
-    # Send a message
-    response = await client.send_message(
-        conversation_id="test_conv",
-        model_name="test-model",
-        user_message="Hello, world!"
-    )
-    print(f"Response: {response}")
-    
-    # Clean up conversation
-    await client.cleanup("test_conv")
-    await client.close()
+#### Test PyPI (Recommended for Testing)
 
-# Run the async main function
-import asyncio
-asyncio.run(main())
-```
-
-## Streaming Responses
-
-```python
-async def stream_example():
-    client = AutobyteusClient()
-    try:
-        async for chunk in client.stream_message(
-            conversation_id="stream_conv",
-            model_name="test-model",
-            user_message="Stream this response"
-        ):
-            print(f"Received chunk: {chunk}")
-    finally:
-        await client.cleanup("stream_conv")
-        await client.close()
-```
-
-## Testing
-
-1. Create a `.env.test` file with test credentials:
+1. Register an account at https://test.pypi.org/
+2. Upload to Test PyPI:
 ```bash
-AUTOBYTEUS_API_KEY="test_key"
-AUTOBYTEUS_SERVER_URL="http://test-server:8000"
+python -m twine upload --repository testpypi dist/*
 ```
-
-2. Run tests:
+3. Install from Test PyPI:
 ```bash
-pytest -v autobyteus_llm_client/tests/
+pip install --index-url https://test.pypi.org/simple/ autobyteus_llm_client
 ```
 
-## Error Handling
+#### Production PyPI
 
-The client will raise `RuntimeError` for API errors. Always wrap calls in try/except blocks:
+When ready to publish to production:
+```bash
+python -m twine upload dist/*
+```
 
-```python
-try:
-    response = await client.send_message(...)
-except RuntimeError as e:
-    print(f"API error occurred: {str(e)}")
+Note: You'll need to provide your PyPI username and password when uploading.
+
+## Development
+
+### Requirements
+- Python 3.8 or higher
+- httpx
+
+### Installing Development Dependencies
+```bash
+pip install -e ".[test]"
 ```
 
 ## License
 
-MIT License
+This project is licensed under the MIT License.
