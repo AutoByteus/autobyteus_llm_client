@@ -1,6 +1,6 @@
 # Autobyteus LLM Client
 
-Async Python client for Autobyteus LLM API.
+Async Python client for Autobyteus LLM API with HTTPS support.
 
 ## Installation
 
@@ -8,60 +8,119 @@ Async Python client for Autobyteus LLM API.
 pip install autobyteus_llm_client
 ```
 
-## Building and Publishing the Package
+## Certificate Setup
 
-### Prerequisites
-
-1. Create a PyPI account at https://pypi.org/account/register/
-2. Install build and twine:
+1. Create certificates directory:
 ```bash
-pip install build twine
+mkdir -p certificates
 ```
 
-### Building the Package
-
-To build the package, run:
+2. Copy the server's certificate:
 ```bash
-python -m build
+cp path/to/server/certificates/cert.pem certificates/
 ```
 
-This will create two files in the `dist` directory:
-- A source archive (.tar.gz)
-- A wheel (.whl)
-
-### Publishing to PyPI
-
-#### Test PyPI (Recommended for Testing)
-
-1. Register an account at https://test.pypi.org/
-2. Upload to Test PyPI:
+3. Get certificate fingerprint (optional but recommended):
 ```bash
-python -m twine upload --repository testpypi dist/*
-```
-3. Install from Test PyPI:
-```bash
-pip install --index-url https://test.pypi.org/simple/ autobyteus_llm_client
+openssl x509 -in certificates/cert.pem -fingerprint -sha256 -noout
 ```
 
-#### Production PyPI
+## Configuration
 
-When ready to publish to production:
+Set environment variables:
 ```bash
-python -m twine upload dist/*
+# Required
+export AUTOBYTEUS_API_KEY='your-api-key'
+
+# Optional (defaults shown)
+export AUTOBYTEUS_SERVER_URL='https://api.autobyteus.com:8443'
+export AUTOBYTEUS_CERT_FINGERPRINT='your-certificate-fingerprint'  # Optional but recommended
 ```
 
-Note: You'll need to provide your PyPI username and password when uploading.
+## Usage
+
+```python
+from autobyteus_llm_client import AutobyteusClient
+
+async def main():
+    # Initialize client (automatically uses certificate from certificates/cert.pem)
+    client = AutobyteusClient()
+    
+    try:
+        # Get available models
+        models = await client.get_available_models()
+        print(f"Available models: {models}")
+        
+        # Send a message
+        response = await client.send_message(
+            conversation_id="conv123",
+            model_name="gpt-4",
+            user_message="Hello!"
+        )
+        print(f"Response: {response}")
+        
+    finally:
+        await client.close()
+```
+
+## Security Features
+
+1. Certificate Verification
+   - Automatic certificate validation
+   - Certificate expiration checking
+   - Optional fingerprint verification
+   - Path validation and security checks
+
+2. SSL/TLS Security
+   - HTTPS communication
+   - Certificate-based authentication
+   - Secure default configuration
 
 ## Development
 
 ### Requirements
 - Python 3.8 or higher
 - httpx
+- cryptography
 
 ### Installing Development Dependencies
 ```bash
 pip install -e ".[test]"
 ```
+
+### Running Tests
+```bash
+pytest
+```
+
+## Building and Publishing
+
+### Build Package
+```bash
+python -m build
+```
+
+### Publish to Test PyPI
+```bash
+python -m twine upload --repository testpypi dist/*
+```
+
+### Publish to Production PyPI
+```bash
+python -m twine upload dist/*
+```
+
+## Troubleshooting
+
+1. Certificate Issues
+   - Verify certificate location (should be in `certificates/cert.pem`)
+   - Check certificate expiration
+   - Verify fingerprint if enabled
+
+2. Connection Issues
+   - Verify server URL and port
+   - Check certificate validity
+   - Ensure API key is set correctly
 
 ## License
 

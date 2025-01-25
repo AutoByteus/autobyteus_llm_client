@@ -4,17 +4,22 @@ import logging
 import json
 from typing import Dict, Optional, AsyncGenerator, Any
 from urllib.parse import urljoin
+from pathlib import Path
+from datetime import datetime, timedelta
+from .cert_utils import verify_certificate, CertificateError
 
 logger = logging.getLogger(__name__)
 
 class AutobyteusClient:
-    DEFAULT_SERVER_URL = "http://localhost:8000"
+    DEFAULT_SERVER_URL = "https://api.autobyteus.com:8443"
     API_KEY_HEADER = "AUTOBYTEUS_API_KEY"
     API_KEY_ENV_VAR = "AUTOBYTEUS_API_KEY"
     
     def __init__(self):
+        """Initialize the client with certificate verification"""
         self.server_url = os.getenv('AUTOBYTEUS_SERVER_URL', self.DEFAULT_SERVER_URL)
         self.api_key = os.getenv(self.API_KEY_ENV_VAR)
+        self.expected_fingerprint = os.getenv('AUTOBYTEUS_CERT_FINGERPRINT')
         
         if not self.api_key:
             raise ValueError(
@@ -22,39 +27,48 @@ class AutobyteusClient:
                 "Please set it before initializing the client."
             )
         
-        # Configure timeout with only connect timeout set
+        # Look for certificate in the project root directory
+        self.cert_path = Path(__file__).parent.parent / 'certificates' / 'cert.pem'
+        
+        if not self.cert_path.exists():
+            raise CertificateError(
+                f"SSL certificate not found at {self.cert_path}. "
+                "Please ensure the certificate is properly installed."
+            )
+            
+        # Verify certificate before using it
+        self._verify_certificate()
+        
+        # Configure timeout
         timeout_config = httpx.Timeout(
-            connect=10.0,  # 10 second connect timeout
-            read=None,     # No read timeout
-            write=None,    # No write timeout
-            pool=None      # No pool timeout
+            connect=10.0,
+            read=None,
+            write=None,
+            pool=None
         )
         
-        # Async client for normal operations
+        # Initialize clients
         self.async_client = httpx.AsyncClient(
-            verify=True,
+            verify=str(self.cert_path),
             headers={self.API_KEY_HEADER: self.api_key},
             timeout=timeout_config
         )
         
-        # Sync client for discovery operations
         self.sync_client = httpx.Client(
-            verify=True,
+            verify=str(self.cert_path),
             headers={self.API_KEY_HEADER: self.api_key},
             timeout=timeout_config
         )
         
         logger.info(f"Initialized Autobyteus client with server URL: {self.server_url}")
+        logger.info(f"Using verified certificate from: {self.cert_path}")
 
-    def get_available_models_sync(self) -> Dict[str, Any]:
-        """Synchronous model discovery for factory initialization"""
-        try:
-            response = self.sync_client.get(urljoin(self.server_url, "/models"))
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            logger.error(f"Sync model fetch error: {str(e)}")
-            raise RuntimeError(str(e)) from e
+    def _verify_certificate(self) -> None:
+        """
+        Verify the certificate's validity and fingerprint.
+        Raises CertificateError if verification fails.
+        """
+        verify_certificate(self.cert_path, self.expected_fingerprint)
 
     async def get_available_models(self) -> Dict[str, Any]:
         """Async model discovery for other use cases"""
@@ -64,6 +78,16 @@ class AutobyteusClient:
             return response.json()
         except httpx.HTTPError as e:
             logger.error(f"Async model fetch error: {str(e)}")
+            raise RuntimeError(str(e)) from e
+
+    def get_available_models_sync(self) -> Dict[str, Any]:
+        """Synchronous model discovery for factory initialization"""
+        try:
+            response = self.sync_client.get(urljoin(self.server_url, "/models"))
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Sync model fetch error: {str(e)}")
             raise RuntimeError(str(e)) from e
 
     async def send_message(
