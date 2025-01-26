@@ -5,14 +5,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="autobyteus_llm_client",
-    version="1.0.3",
+    version="1.0.6",
     author="Ryan Zheng",
     author_email="ryan.zheng.work@gmail.com",
     description="Async Python client for Autobyteus LLM API",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/AutoByteus/autobyteus_llm_client.git",
-    packages=find_packages(include=["autobyteus_llm_client", "autobyteus_llm_client.*"]),
+    packages=find_packages(exclude=["autobyteus_llm_client.certificates"]),
+    package_data={
+        "autobyteus_llm_client": ["certificates/cert.pem"],
+    },
+    include_package_data=True,
     python_requires=">=3.8",
     install_requires=[
         "httpx",

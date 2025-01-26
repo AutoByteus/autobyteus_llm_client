@@ -28,7 +28,7 @@ class AutobyteusClient:
             )
         
         # Look for certificate in the project root directory
-        self.cert_path = Path(__file__).parent.parent / 'certificates' / 'cert.pem'
+        self.cert_path = Path(__file__).parent / 'certificates' / 'cert.pem'
         
         if not self.cert_path.exists():
             raise CertificateError(
