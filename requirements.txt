@@ -1,2 +1,3 @@
 # Core dependencies
 httpx
+cryptography

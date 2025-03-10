@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="autobyteus_llm_client",
-    version="1.0.6",
+    version="1.0.8",
     author="Ryan Zheng",
     author_email="ryan.zheng.work@gmail.com",
     description="Async Python client for Autobyteus LLM API",
@@ -20,6 +20,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "httpx",
+        "cryptography",
     ],
     extras_require={
         "test": [
