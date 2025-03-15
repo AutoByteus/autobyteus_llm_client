@@ -17,7 +17,7 @@ class AutobyteusClient:
     
     def __init__(self):
         """Initialize the client with certificate verification"""
-        self.server_url = os.getenv('AUTOBYTEUS_SERVER_URL', self.DEFAULT_SERVER_URL)
+        self.server_url = os.getenv('AUTOBYTEUS_LLM_SERVER_URL', self.DEFAULT_SERVER_URL)
         self.api_key = os.getenv(self.API_KEY_ENV_VAR)
         self.expected_fingerprint = os.getenv('AUTOBYTEUS_CERT_FINGERPRINT')
         

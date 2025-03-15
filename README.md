@@ -33,7 +33,7 @@ Set environment variables:
 export AUTOBYTEUS_API_KEY='your-api-key'
 
 # Optional (defaults shown)
-export AUTOBYTEUS_SERVER_URL='https://api.autobyteus.com:8443'
+export AUTOBYTEUS_LLM_SERVER_URL='https://api.autobyteus.com:8443'
 export AUTOBYTEUS_CERT_FINGERPRINT='your-certificate-fingerprint'  # Optional but recommended
 ```
 
